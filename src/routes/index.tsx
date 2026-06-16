@@ -29,8 +29,8 @@ type RawEntry = {
   id: string | number;
   date: string;
   entity?: string;
-  hoursWorked?: string;
-  productiveWorkCompleted?: string;
+  "Hours Worked"?: string;
+  "Productive Work Completed"?: string;
   "%WorkPending"?: string;
 };
 
@@ -47,8 +47,8 @@ function mapRawToEntry(r: RawEntry): Entry {
     id: r.id,
     date: r.date,
     member: (r.entity ?? "") as Member,
-    hours: r.hoursWorked ?? "",
-    work: r.productiveWorkCompleted ?? "",
+    hours: r["Hours Worked"] ?? "",
+    work: r["Productive Work Completed"] ?? "",
     pending: r["%WorkPending"] ?? "",
   };
 }
@@ -121,8 +121,8 @@ function Index() {
       sheet1: {
         date,
         entity: m,
-        hoursWorked: d.hours,
-        productiveWorkCompleted: d.work,
+        "Hours Worked": d.hours,
+        "Productive Work Completed": d.work,
         "%WorkPending": d.pending,
       },
     };
