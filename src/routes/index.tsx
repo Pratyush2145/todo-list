@@ -25,13 +25,33 @@ type Entry = {
   pending: string;
 };
 
+type RawEntry = {
+  id: string | number;
+  date: string;
+  entity?: string;
+  hoursWorked?: string;
+  productiveWorkCompleted?: string;
+  "%WorkPending"?: string;
+};
+
 type Sheet1GetResponse = {
-  sheet1S: Entry[];
+  sheet1: RawEntry[];
 };
 
 type Sheet1CreateResponse = {
-  sheet1: Entry;
+  sheet1: RawEntry;
 };
+
+function mapRawToEntry(r: RawEntry): Entry {
+  return {
+    id: r.id,
+    date: r.date,
+    member: (r.entity ?? "") as Member,
+    hours: r.hoursWorked ?? "",
+    work: r.productiveWorkCompleted ?? "",
+    pending: r["%WorkPending"] ?? "",
+  };
+}
 
 const SHEETY_API_URL = "https://api.sheety.co/74238cce7a5193d8bc00a1e1997c9d46/informationSpreadsheet/sheet1";
 
@@ -81,7 +101,7 @@ function Index() {
         const response = await fetch(SHEETY_API_URL);
         if (!response.ok) throw new Error(`Failed to load entries (${response.status})`);
         const data = (await response.json()) as Sheet1GetResponse;
-        setEntries(data.sheet1S ?? []);
+        setEntries((data.sheet1 ?? []).map(mapRawToEntry));
       } catch (error) {
         console.error(error);
         setError("Could not load entries. Please try again.");
@@ -100,10 +120,10 @@ function Index() {
     const payload = {
       sheet1: {
         date,
-        member: m,
-        hours: d.hours,
-        work: d.work,
-        pending: d.pending,
+        entity: m,
+        hoursWorked: d.hours,
+        productiveWorkCompleted: d.work,
+        "%WorkPending": d.pending,
       },
     };
 
@@ -111,13 +131,14 @@ function Index() {
       if (editingEntry?.member === m) {
         const rowId = String(editingEntry.id);
         const response = await fetch(`${SHEETY_API_URL}/${rowId}`, {
+          method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
         });
 
         if (!response.ok) throw new Error(`Failed to update entry (${response.status})`);
         const data = (await response.json()) as Sheet1CreateResponse;
-        setEntries((prev) => prev.map((entry) => (entry.id === editingEntry.id ? data.sheet1 : entry)));
+        setEntries((prev) => prev.map((entry) => (entry.id === editingEntry.id ? mapRawToEntry(data.sheet1) : entry)));
         setEditingEntry(null);
       } else {
         const response = await fetch(SHEETY_API_URL, {
@@ -128,7 +149,7 @@ function Index() {
 
         if (!response.ok) throw new Error(`Failed to save entry (${response.status})`);
         const data = (await response.json()) as Sheet1CreateResponse;
-        setEntries((prev) => [data.sheet1, ...prev]);
+        setEntries((prev) => [mapRawToEntry(data.sheet1), ...prev]);
       }
 
       setDrafts((prev) => ({ ...prev, [m]: { hours: "", work: "", pending: "" } }));
